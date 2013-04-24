@@ -27,11 +27,7 @@
     else {
         img_count++;
     }
-    //myView.image=[t objectAtIndex:img_count];
-    [UIView transitionWithView:self.view
-                      duration:1.0f
-                       options:UIViewAnimationOptionTransitionCrossDissolve
-                    animations:^{
+    [UIView transitionWithView:self.view duration:1.0f options:UIViewAnimationOptionTransitionCrossDissolve animations:^{
                         myView.image = [t objectAtIndex:img_count];
                     } completion:nil];
     
@@ -49,9 +45,8 @@
     else {
         img_count--;
     }
-   // myView.image=[t objectAtIndex:img_count];
-    [UIView transitionWithView:self.view
-                      duration:1.0f
+   
+    [UIView transitionWithView:self.view duration:1.0f
                        options:UIViewAnimationOptionTransitionCrossDissolve
                     animations:^{
                         myView.image = [t objectAtIndex:img_count];
@@ -98,6 +93,9 @@
 */
  
 
+
+
+//a method that will be used by the main thread to update the progress bar
 -(void)UpdateUI:(double)value
 {
     [progressBar setProgress:value];
@@ -110,32 +108,50 @@
     }
 }
 
+
+//a method that will be used by the main thread to notify the user if there is no network connection/response
+-(void)displayPopUp
+{
+    
+    UIAlertView *alert = [[UIAlertView alloc] initWithTitle:@"No network connection" 
+                                                    message:@"Oops!! No response from the server. Check your network connectivity and try again ." 
+                                                   delegate:nil 
+                                          cancelButtonTitle:@"OK"
+                                          otherButtonTitles:nil];
+    [alert show];
+    [alert release];
+    [indicator stopAnimating]; //stop the Activity Indicator when the download is done
+    [indicator removeFromSuperview];
+    
+    [progressBar removeFromSuperview];
+    
+}
+
+
 //Entry point for my Thread. This is where I do all the Data fetching work and store the downloaded images to the NSArray, which will be used by my ImageView.
 -(void)myThreadMainMethod:(NSThread *)myThread
 {
-    NSLog(@"Thread");
+    NSLog(@"Secondary thread Executing");
 
     NSString *URLString = @"http://api.flickr.com/services/rest/?format=json&sort=random&method=flickr.photos.search&tags=rocket&tag_mode=all&api_key=0e2b6aaf8a6901c264acb91f151a3350&nojsoncallback=1";
+    
     NSURL *myURL = [NSURL URLWithString:URLString];
-    
     NSURLRequest *myRequest = [NSURLRequest requestWithURL:myURL];
-    
-     NSURLResponse *response = nil;
-     NSError *error = nil;
-     NSData *responseData = [NSURLConnection sendSynchronousRequest:myRequest returningResponse:&response error:&error];
-    
-    
+    NSURLResponse *response = nil;
+    NSError *error = nil;
+     
+    NSData *responseData = [NSURLConnection sendSynchronousRequest:myRequest returningResponse:&response error:&error];
     
     
     if (responseData) {
-      //  NSLog(@"%@", [NSString stringWithCString:[responseData bytes] encoding:NSUTF8StringEncoding]);
-        
+      
         NSError * j_error = nil;
         id json = [NSJSONSerialization JSONObjectWithData:responseData options:NSJSONReadingMutableContainers error:&j_error];
+        
         if(j_error == nil)
         {
             NSDictionary * result = (NSDictionary *) json; //this will contain the raw data downloaded
-            //NSLog(@"|>%@<|", result);
+            //NSLog(@"%@", result);
             
             
             NSMutableDictionary *result2 = [[NSMutableDictionary alloc] init];
@@ -151,7 +167,7 @@
             NSArray *pid=[result3 valueForKey:@"id"];
             NSArray *secret=[result3 valueForKey:@"secret"];
             
-            //for loop to construct all the URL addresses.
+            //for loop to construct all the URL addresses and fetch the image from them.
             for (int i = 0; i < [farm count]; i++)
             {
                 NSString *final=[NSString stringWithString:@"http://farm"];
@@ -170,31 +186,42 @@
                 NSURL *url = [NSURL URLWithString:final];
                 NSData *data = [NSData dataWithContentsOfURL:url];
                 UIImage *img = [[UIImage alloc] initWithData:data];              
-                //img will contain the downloaded image. Add it to the NSArray so that IMageVIew uses it for loading.
-                
+                //img will contain the downloaded image. Add it to the NSArray so that ImageView uses it for loading.
                 
                 [t addObject:img];
+                
                 wait=1; //This is a flag I use to notify the main Thread that atleast one image is loaded. So the ImageView can display the first image.
               
               //   NSLog(@"%@",t);
+                
                 progress=(float)(i+1)/[farm count];
                
+                //calling the main thread to update the UIProgress Indicator
                 dispatch_async(dispatch_get_main_queue(), ^{
                     [self UpdateUI:progress];
-                    
-
                 });
+                
                 //NSLog(@"%f",progress);
                 
             }
         }
+        NSLog(@"Loaded");
         
     }
-        NSLog(@"Loaded");
+    else {
+        //if there is no response from the server, notify the user
+        //also display a dummy image in the imageView. 
+        [t addObject:[UIImage imageNamed:@"Icon.png"]];
+        wait=1;
+        NSLog(@"No network Connection/Response");
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self displayPopUp];
+        });
+        
+    }
+        
     
-   // [self.activityIndicator stopAnimating];
-    
- 
+   
 }
 
 
@@ -204,23 +231,33 @@
     [super viewDidLoad];
 	// Do any additional setup after loading the view, typically from a nib.
 
-   // myView = [[UIImageView alloc] initWithFrame:self.view.frame];
-    //creating my ImageView 
+   
+    //getting my screen dimensions 
     CGRect screenBounds = [[UIScreen mainScreen] bounds];
+    
+    //creating my imageView
     myView = [[UIImageView alloc] initWithFrame:screenBounds];
-    //myView.contentMode = UIViewContentModeScaleAspectFit;
-    myView.autoresizingMask = (UIViewAutoresizingFlexibleWidth |
-                               UIViewAutoresizingFlexibleHeight);  
+
+    //this line is used to resize the image when the device is rotated
+    myView.autoresizingMask = (UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight);  
+    
+    
+    //initializing my array to store the images
     t = [[NSMutableArray alloc] init];
+    
+    //initialing the variables declared
     img_count=0;
     progress=0.0;
-    
     wait=0;
 
+    
     //creating my ActivityIndicator
-    indicator=[[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleWhite ];
+    indicator=[[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle: UIActivityIndicatorViewStyleWhite ];
     indicator.hidesWhenStopped = YES;
+    
+    //add the activity indicator as a subview to the UIImageView
     [myView addSubview:indicator];
+    
     [indicator startAnimating];
     
     
@@ -229,12 +266,8 @@
     [myThread start];
     
    
-
-   
-    
-    //Tried Progress indicator. But I couldn't use it since I had to use Synchronous connection in my secondary thread.
-    
-    progressBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleDefault];
+    //initialize the progress bar
+    progressBar = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
     [myView addSubview:progressBar];
     [progressBar setProgress:progress];
        
@@ -247,7 +280,7 @@
 
     }
     
-    
+    //when the while loop exits, the secondary thread has downloaded atleast one image
     myView.image=[t objectAtIndex:0];
     
     //adding swipe gestures to my Image View
@@ -263,11 +296,9 @@
     [[self view] addGestureRecognizer:recognizer];
     [recognizer release];
     
-    [super viewDidLoad];
-    
     
     [self.view addSubview:myView];
-    [myView release]; 
+     
 
 
 }
@@ -276,6 +307,7 @@
 {
     [super viewDidUnload];
     // Release any retained subviews of the main view.
+    [myView release];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
