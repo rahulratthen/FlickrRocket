@@ -6,6 +6,20 @@
 //  Copyright (c) 2013 __MyCompanyName__. All rights reserved.
 //
 
+
+/*
+ GitHub URL
+ https://github.com/rahulratthen/FlickrRocket-v1
+ */
+
+/*
+ The Readme.txt file clearly highlights the features I added to the application. I suggest you read that document once before looking at my code.
+ */
+
+
+
+
+
 #import "ViewController.h"
 
 @interface ViewController ()
@@ -251,7 +265,7 @@
     wait=0;
 
     
-    //creating my ActivityIndicator
+    //creating my ActivityIndicator. Though not necessary, I was learning about it and tried it out
     indicator=[[UIActivityIndicatorView alloc]initWithActivityIndicatorStyle: UIActivityIndicatorViewStyleWhite ];
     indicator.hidesWhenStopped = YES;
     
