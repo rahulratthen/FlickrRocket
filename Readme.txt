@@ -27,7 +27,7 @@ Additional Features added by me:
 How to Run the Application:
 Approach 1:
 	Clone the GitHub repository of this project.
-	 
+	https://github.com/rahulratthen/FlickrRocket
 
 Approach 2:
 	I have attached a zip version of my XCode project. (XCode version 4.3.2). Extract that XCode project and import it in to XCode and run it.

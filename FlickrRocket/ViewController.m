@@ -9,7 +9,7 @@
 
 /*
  GitHub URL
- 
+ https://github.com/rahulratthen/FlickrRocket
  */
 
 /*
